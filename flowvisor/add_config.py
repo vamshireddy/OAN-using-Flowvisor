@@ -71,7 +71,7 @@ def create_flowspace(slice_queues, switch_dpid, slice_name, ip, prefix, priority
                 '-f', '%s'%slice_queues[slice_name]]
     print command
     print "fs: "+" ".join(command)
-    process = subprocess.Popen(command,stdout=subprocess.PIPE)
+    process = subprocess.Popen(command)
 
 interfaces = find_sw_ifs()
 switches = find_switches()
