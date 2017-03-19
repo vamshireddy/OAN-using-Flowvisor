@@ -1,13 +1,5 @@
-"""Custom topology example
-
-Two directly connected switches plus a host for each switch:
-
-   host --- switch --- switch --- host
-
-Adding the 'topos' dict with a key/value pair to generate our newly defined
-topology enables one to pass in '--topo=mytopo' from the command line.
+""" Simple topology for Home Access Network.
 """
-
 from mininet.topo import Topo
 from mininet.node import RemoteController
 from mininet.net import Mininet
@@ -17,11 +9,8 @@ from mininet.link import TCLink
 from functools import partial
 
 class MyTopo( Topo ):
-    "Simple topology example."
 
     def __init__( self, num_homes_per_zone, num_isps):
-        "Create custom topo."
-
         # Initialize topology
         Topo.__init__( self )
 
