@@ -20,7 +20,7 @@ class MyTopo( Topo ):
         return self.addSwitch('s%d' % (self.switch_name_cntr), 
                 dpid="%d" % (self.switch_name_cntr))
 
-    def __init__( self, num_homes_per_zone, num_isps):       
+    def __init__( self, num_homes_per_zone, num_isps, enable_all = True):       
         
         self.switch_name_cntr = 0
         self.host_name_cntr = 0
@@ -28,11 +28,11 @@ class MyTopo( Topo ):
         # Initialize topology
         Topo.__init__( self )
 
-        home_link_config = {'bw': 50, 'max_queue_size' : 1000, 'use_htb' : True}
-        isp_link_config = {'bw': 1000, 'max_queue_size' : 1000, 'use_htb' : True}
-        core_link_config = {'bw': 1000, 'max_queue_size' : 1000, 'use_htb' : True}
-        home_core_link_config = {'bw': 500, 'max_queue_size' : 1000, 'use_htb' : True}
-        home_inside_link_config = {'bw': 500, 'max_queue_size' : 1000, 'use_htb' : True}
+        home_link_config = {}
+        isp_link_config = {}
+        core_link_config = {}
+        home_core_link_config = {}
+        home_inside_link_config = {}
         
         #Create isps and connect to core switch
         core1 = self.add_mn_switch()
