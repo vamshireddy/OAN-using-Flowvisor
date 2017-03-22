@@ -51,18 +51,30 @@ def add_qos_on_iface(iface, max_rate, queue_count, qmaxrates):
 
 def clean_qos_config():
     command = ['ovs-vsctl', '--all', 'destroy', 'queue']
-    process = subprocess.Popen(command,stdout=subprocess.PIPE)
+    process = subprocess.Popen(command)
     command = ['ovs-vsctl', '--all', 'destroy', 'qos']
-    process = subprocess.Popen(command,stdout=subprocess.PIPE)
+    process = subprocess.Popen(command)
+
+def clean_flowvisor_config():
+    command = ['fvctl', '-f', '/dev/null', 'remove-flowspace', 'isp1'];
+    process = subprocess.Popen(command)
+    command = ['fvctl', '-f', '/dev/null', 'remove-flowspace', 'isp2'];
+    process = subprocess.Popen(command)
 
 def create_slice(slice_name, email, ip, port):
     command = ['fvctl', '-f', '/dev/null', 'add-slice', slice_name, 'tcp:%s:%s'%(ip, port), email]
     print "slice: "+" ".join(command)
     process = subprocess.Popen(command,stdout=subprocess.PIPE)
 
+def enable_stp(switches):
+    print "Enabling STP on "+str(switches)
+    for i in switches:
+        command = ["ovs-vsctl", "set", "bridge", i, "stp-enable=true"]
+        process = subprocess.Popen(command)
+
 def create_flowspace(slice_queues, switch_dpid, slice_name, ip, prefix, priority):
     command = ['fvctl', '-f', '/dev/null',
-                'add-flowspace', '%s%s%s'%(slice_name, ip, prefix),
+                'add-flowspace', '%s'%(slice_name),
                 '%s'%switch_dpid,
                 '%s'%priority,
                 'nw_src=%s/%s'%(ip, prefix),
@@ -76,7 +88,7 @@ def create_flowspace(slice_queues, switch_dpid, slice_name, ip, prefix, priority
 interfaces = find_sw_ifs()
 switches = find_switches()
 
-qmaxrates = {1: 1000000, 2: 200}
+qmaxrates = {1: 10000000, 2: 1000000}
 slice_queues = {'isp1': 1, 'isp2': 2}
 slices = {
         'isp1': { 
@@ -90,8 +102,8 @@ slices = {
                     'email' : 'prashasthi@slice', 
                     'ip' : 'localhost', 
                     'port' : '11002', 
-                    'ipmatch': '192.168.0.0', 
-                    'ipnm': '24'
+                    'ipmatch': '10.0.0.2', 
+                    'ipnm': '32'
                 }
         }
 max_rate = 1000000000
@@ -99,6 +111,12 @@ max_rate = 1000000000
 if len(sys.argv) > 1:
     if sys.argv[1] == "clean":
         clean_qos_config()
+        clean_flowvisor_config()
+        sys.exit(0)
+    elif sys.argv[1] == "enablestp":
+        print "Enabling STP"
+        enable_stp(["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "s12"
+            ,"s13", "s14", "s15"])
         sys.exit(0)
 
 # Add queues for all the interfaces in the switch.
