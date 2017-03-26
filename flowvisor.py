@@ -72,60 +72,31 @@ def enable_stp(switches):
         command = ["ovs-vsctl", "set", "bridge", i, "stp-enable=true"]
         process = subprocess.Popen(command)
 
-def create_flowspace(slice_queues, switch_dpid, slice_name, ip, prefix, priority):
+def create_fv_flow(switch_dpid, slice_name, queue, match_str, priority, permissions):
     command = ['fvctl', '-f', '/dev/null',
                 'add-flowspace', '%s'%(slice_name),
                 '%s'%switch_dpid,
                 '%s'%priority,
-                'nw_src=%s/%s'%(ip, prefix),
-                '%s=7'%(slice_name),
-                '-q', '%s'%slice_queues[slice_name], 
-                '-f', '%s'%slice_queues[slice_name]]
+                '%s'%(match_str),
+                '%s=%s'%(slice_name, permissions),
+                '-q', '%s'%queue, 
+                '-f', '%s'%queue]
     print command
     print "fs: "+" ".join(command)
     process = subprocess.Popen(command)
 
-interfaces = find_sw_ifs()
-switches = find_switches()
-
-qmaxrates = {1: 10000000, 2: 1000000}
-slice_queues = {'isp1': 1, 'isp2': 2}
-slices = {
-        'isp1': { 
-                    'email' : 'vamshi@slice', 
-                    'ip': 'localhost', 
-                    'port' : '11001', 
-                    'ipmatch': '10.0.0.0',
-                    'ipnm': '24'
-                }, 
-        'isp2': { 
-                    'email' : 'prashasthi@slice', 
-                    'ip' : 'localhost', 
-                    'port' : '11002', 
-                    'ipmatch': '10.0.0.2', 
-                    'ipnm': '32'
-                }
-        }
-max_rate = 1000000000
-
-if len(sys.argv) > 1:
-    if sys.argv[1] == "clean":
-        clean_qos_config()
-        clean_flowvisor_config()
-        sys.exit(0)
-    elif sys.argv[1] == "enablestp":
-        print "Enabling STP"
-        enable_stp(["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "s12"
-            ,"s13", "s14", "s15"])
-        sys.exit(0)
-
-# Add queues for all the interfaces in the switch.
-for iface in interfaces:
-    add_qos_on_iface(iface, max_rate, len(qmaxrates), qmaxrates)
-
-# Create slices
-for s in slices:
-    dic = slices[s]
-    # Create flowspaces
-    for sdpid in switches:
-        create_flowspace(slice_queues, sdpid, s, dic['ipmatch'], dic['ipnm'], 100)
+def add_fv_flows(fvslices, edge_switch_dpids, switch_dpids):
+    for slicename in fvslices:
+        fvslice = fvslices[slicename]
+        for sdpid in switch_dpids:
+            rules = fvslice['rules']
+            for rule in rules:
+                if rule['sw_type'] == 'non-edge':
+                    print "Intalling non-edge rule on "+str(sdpid)
+                    create_fv_flow(sdpid, slicename, rule['queue_id'], rule['match_str'], rule['priority'], rule['permissions'])
+        for sdpid in edge_switch_dpids:
+            rules = fvslice['rules']
+            for rule in rules:
+                if rule['sw_type'] == 'edge' and rule['sw_dpid'] == sdpid :
+                    print "Intalling edge rule on "+str(sdpid)
+                    create_fv_flow(sdpid, slicename, rule['queue_id'], rule['match_str'], rule['priority'], rule['permissions'])
