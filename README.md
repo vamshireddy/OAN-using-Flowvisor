@@ -2,12 +2,7 @@
 BaaS For Access Networks
 
 ### Commands
-#### 1. Run mininet
-`sudo mn --custom <script_name> --topo <topo_name> --link tc --controller remote --mac --arp`
-for running baas script
-`sudo mn --custom baas_project.py --topo fvtopo --link tc --controller remote --mac --arp`
-
-#### 2. FlowVisor
+#### 1. FlowVisor
 Start flowvisor and initialize the Database.
 
 `sudo -u flowvisor fvconfig generate /etc/flowvisor/config.json`
@@ -28,19 +23,5 @@ ensure that FlowVisor is running by getting its configuration:
 Check if the slices are created.
 `fvctl -f /dev/null list-slices`
 
-#### 4. Run the flowvisor configuration script.
-
-Goto `flowvisor` directory and run `add_config.py`
-This script adds queues on every switch port. 
-
-`sudo python add_config.py`
-
-For cleaning up (not required here)
-`sudo python add_config.py clean`
-
-#### 5. Setup STP on the switches
-
-`sudo python add_config.py enablestp`
-
-
-
+#### 3. Start Mininet
+`sudo python simple_home_access.py`
