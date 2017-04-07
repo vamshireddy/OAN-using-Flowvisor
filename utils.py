@@ -1,11 +1,21 @@
 import subprocess
 import sys
 
+def clean_up_config(fv_host, slices):
+    commands = []
+    for i in slices:
+        commands += ["fvctl -h "+fv_host+" -f /dev/null remove-flowspace "+i]
+    commands += ["sudo ovs-vsctl --all destroy queue"]
+    commands += ["sudo ovs-vsctl --all destroy qos"]
+
+    for i in commands:
+        print "Executing" + str(i.split(" "))
+        process = subprocess.Popen(i.split(" "))
+
 def enable_stp(switches):
     print "Enabling STP on "+str(switches)
     for switch in switches:
         command = ["ovs-vsctl", "set", "bridge", switch.name, "stp-enable=true"]
-        print "Executing: "+str(command)
         process = subprocess.Popen(command)
 
 def get_host_interfaces(hosts):
@@ -16,6 +26,13 @@ def get_host_interfaces(hosts):
             all_interfaces += [iface.name]
     return all_interfaces
 
+"""
+    Get edge switch details.
+    Returns 3 lists.
+    List1: Contains edge switch dpids.
+    List2: Contains edge switch names.
+    List3: Contains edge interface tuples (<switch_dpid>, <port_on_the_switch>, <host_name_connected_to_the_port>)
+"""
 def get_edge_ints(net):
     edge_switches = []
     edge_interfaces = []
@@ -63,7 +80,6 @@ def fill_edge_rules(slices, edge_sw_bindings, permissions, priority):
         host_name = rule[2]
         switch_dpid = rule[0]
         isp_name = get_host_owner(host_name, slices)
-        print isp_name
         isp_slice = slices[isp_name]
         queue = isp_slice['queue_id']
         isp_slice['rules'] += [{'name': isp_name, 'match_str': 'in_port=%s'%(port), 'priority':priority, 'sw_type': 'edge', 
@@ -77,5 +93,5 @@ def lookup_ip(host_name, slices):
 
 def set_static_ips(slices, net):
     for host in net.hosts:
-        print "Setting "+lookup_ip(host.name, slices)+" for "+host.name
+        print "Assigned "+lookup_ip(host.name, slices)+" for "+host.name
         host.setIP(lookup_ip(host.name, slices))

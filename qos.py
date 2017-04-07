@@ -1,6 +1,9 @@
 import subprocess
 import sys
 
+MB_IN_KB = 1000
+KB_IN_B = 1000
+
 def add_qos_on_non_edge_switch_ifaces(switches, max_rate_of_interface, qmaxrates):
     for switch in switches:
         for iface in switch.intfList():

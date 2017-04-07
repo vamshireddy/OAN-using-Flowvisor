@@ -14,40 +14,48 @@ from mininet.link import TCLink
 from functools import partial
 from mininet.util import dumpNodeConnections
 
-FLOW_VISOR_IP = "127.0.0.1"
+FLOW_VISOR_IP = "128.237.161.103"
 FLOW_VISOR_PORT = 6633
 NO_OF_HOMES_PER_AREA = 2
 NO_OF_ISPS = 2 
-MAX_DATARATE_OF_INTERFACE = 1000000
+MAX_DATARATE_OF_INTERFACE = 100 * qos.MB_IN_KB * qos.KB_IN_B
 SLICES = {
         'comcast': { 
                     'email' : 'comcast.net', 
                     'ip': 'localhost', 
                     'port' : '11001', 
                     'queue_id' : '1',
+                    # These are the hosts that are directly connected to the ISP.
                     'hosts': ['h3', 'h4', 'h9', 'h10', 'h1'],
+                    # Static IP mappings.
                     'ip_mappings': {'h3': '10.0.0.3', 'h4': '10.0.0.4','h9': '10.0.0.9','h10': '10.0.0.10','h1': '10.0.0.1'},
-                    'rules': 
+                    # These rules are installed on all of the switches.
+                    'rules':
                     [
-                    {'name': 'comcast', 'match_str': 'nw_src=10.0.0.0/24', 'priority':'100', 'sw_type': 'non-edge', 'queue_id': '1',
-                            'permissions': '7'}
+                        {'name': 'comcast', 'match_str': 'nw_src=10.0.0.0/24', 'priority':'100', 'sw_type': 'non-edge', 'queue_id': '1',
+                        'permissions': '7'}
                     ]
                 }, 
         'verizon': { 
-                    'email' : 'verizon.net', 
+                    'email' : 'verizon.net',
                     'ip' : 'localhost', 
                     'port' : '11002', 
                     'queue_id' : '2', 
+                    # These are the hosts that are directly connected to the ISP.
                     'hosts': ['h5', 'h6', 'h7', 'h8', 'h2'],
+                    # Static IP mappings.
                     'ip_mappings': {'h5': '192.168.0.5', 'h6': '192.168.0.6','h7': '192.168.0.7','h8': '192.168.0.8','h2': '192.168.0.2'},
+                    # These rules are installed on all of the switches.
                     'rules': 
                     [
-                    {'name': 'verizon', 'match_str': 'nw_src=192.168.0.0/24', 'priority':'100', 'sw_type': 'non-edge', 'queue_id': '2',
-                            'permissions': '7'}
+                        {'name': 'verizon', 'match_str': 'nw_src=192.168.0.0/24', 'priority':'100', 'sw_type': 'non-edge', 'queue_id': '2',
+                        'permissions': '7'}
                     ]
                 }
         }
-QUEUE_MAX_RATES = {1: 10000000, 2: 1000000}
+
+
+QUEUE_MAX_RATES = {1: 10 * qos.MB_IN_KB * qos.KB_IN_B, 2: 1 * qos.MB_IN_KB * qos.KB_IN_B}
 
 class HomeAccessTopo(Topo):
 
@@ -143,31 +151,32 @@ if __name__ == '__main__':
     net = create_topology()
     net.start()
     
-    # Set IPs
+    #2. Set IPs
     utils.set_static_ips(SLICES, net)
 
-    #2. Enable STP on the switches
+    #3. Enable STP on the switches to avoid loops.
     utils.enable_stp(net.switches)
 
     edge_result_list = utils.get_edge_ints(net)
-    edge_sw_dpids = edge_result_list[0]
-    edge_sw_names = edge_result_list[1]
-    edge_sw_host_mappings = edge_result_list[2]
+    edge_sw_dpids = edge_result_list[0] # Edge switch data path ids.
+    edge_sw_names = edge_result_list[1] # Edge switch names (Ex: s1, s2, etc.)
+    edge_sw_host_mappings = edge_result_list[2] # Edge switch host mappings.
 
     print "edge_sw_dpids"+str(edge_sw_dpids)
     print "edge_sw_dpids"+str(edge_sw_names)
 
     non_edge_result_list = utils.get_other_ints(net, edge_sw_names)
-    non_edge_sw_dpids = non_edge_result_list[0]
-    non_edge_sw_names = non_edge_result_list[1]
+    non_edge_sw_dpids = non_edge_result_list[0] # Core switch data path ids.
+    non_edge_sw_names = non_edge_result_list[1] # Core switch names. 
     
     print "non-edge_sw_dpids"+str(non_edge_sw_dpids)
     print "non-edge_sw_dpids"+str(non_edge_sw_names)
 
-    #3. Create flowspaces.
-    flowvisor.add_fv_flows(SLICES, edge_sw_dpids, edge_sw_dpids + non_edge_sw_dpids)
+    #3. Create flowspaces on all the switches.
+    flowvisor.add_fv_flows(FLOW_VISOR_IP, SLICES, edge_sw_dpids + non_edge_sw_dpids)
     
     #4. Create QOS
     qos.add_qos_on_non_edge_switch_ifaces(net.switches, MAX_DATARATE_OF_INTERFACE, QUEUE_MAX_RATES)
     CLI(net)
     net.stop()
+    utils.clean_up_config(FLOW_VISOR_IP, SLICES)
