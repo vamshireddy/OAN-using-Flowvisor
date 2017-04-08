@@ -55,7 +55,7 @@ SLICES = {
         }
 
 
-QUEUE_MAX_RATES = {1: 10 * qos.MB_IN_KB * qos.KB_IN_B, 2: 1 * qos.MB_IN_KB * qos.KB_IN_B}
+QUEUE_MAX_RATES = {1: 50 * qos.MB_IN_KB * qos.KB_IN_B, 2: 50 * qos.MB_IN_KB * qos.KB_IN_B}
 
 class HomeAccessTopo(Topo):
 
@@ -142,7 +142,7 @@ class HomeAccessTopo(Topo):
 def create_topology():
     topo = HomeAccessTopo(NO_OF_HOMES_PER_AREA, NO_OF_ISPS)
     remote = partial(RemoteController, ip=FLOW_VISOR_IP, port=FLOW_VISOR_PORT)
-    net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink, autoSetMacs=True, controller=remote)
+    net = Mininet(topo=topo, link=TCLink, autoSetMacs=True, controller=remote)
     return net
 
 if __name__ == '__main__':
