@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import time
 
 def add_qos_on_iface(iface, max_rate, queue_count, qmaxrates):
     command = ['ovs-vsctl', 'set', 'port', iface]
@@ -51,6 +52,7 @@ def create_fv_flow(host_ip, switch_dpid, slice_name, queue, match_str, priority,
     print command
     print "fs: "+" ".join(command)
     process = subprocess.Popen(command)
+    time.sleep(1)
 
 """     
     Add flowvisor flowspace rules.
