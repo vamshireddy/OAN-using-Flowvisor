@@ -1,0 +1,5 @@
+Latency for dedicated links: 0.09 ms
+Latency on slices links: 0.086 ms
+
+TCP window chosen : 23MB for both simple and complex test
+Also, to ensure no throughput lag is introduced because of TCP
