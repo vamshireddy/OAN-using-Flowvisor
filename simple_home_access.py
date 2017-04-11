@@ -4,6 +4,7 @@
 import utils
 import pprint
 import qos
+import sys
 import flowvisor
 from mininet.topo import Topo
 from mininet.node import RemoteController
@@ -14,11 +15,20 @@ from mininet.link import TCLink
 from functools import partial
 from mininet.util import dumpNodeConnections
 
-FLOW_VISOR_IP = "128.237.161.103"
+class SingleSwitchTopo(Topo):
+    "Single switch connected to n hosts."
+    def build(self, n=2):
+        switch = self.addSwitch('s1')
+        # Python's range(N) generates 0..N-1
+        for h in [2, 3]:
+            host = self.addHost('h%s' % (h + 1))
+            self.addLink(host, switch)
+
+FLOW_VISOR_IP = "127.0.0.1"
 FLOW_VISOR_PORT = 6633
 NO_OF_HOMES_PER_AREA = 2
 NO_OF_ISPS = 2 
-MAX_DATARATE_OF_INTERFACE = 100 * qos.MB_IN_KB * qos.KB_IN_B
+MAX_DATARATE_OF_INTERFACE = 1000 * qos.MB_IN_KB * qos.KB_IN_B
 SLICES = {
         'comcast': { 
                     'email' : 'comcast.net', 
@@ -55,7 +65,7 @@ SLICES = {
         }
 
 
-QUEUE_MAX_RATES = {1: 50 * qos.MB_IN_KB * qos.KB_IN_B, 2: 50 * qos.MB_IN_KB * qos.KB_IN_B}
+QUEUE_MAX_RATES = {1: 100 * qos.MB_IN_KB * qos.KB_IN_B, 2: 50 * qos.MB_IN_KB * qos.KB_IN_B}
 
 class HomeAccessTopo(Topo):
 
@@ -145,12 +155,38 @@ def create_topology():
     net = Mininet(topo=topo, link=TCLink, autoSetMacs=True, controller=remote)
     return net
 
+def create_1_sw_topology():
+    topo = SingleSwitchTopo(n=2)
+    remote = partial(RemoteController, ip=FLOW_VISOR_IP, port=FLOW_VISOR_PORT)
+    net = Mininet(topo=topo, link=TCLink, autoSetMacs=True, controller=remote)
+    return net
+
+def set_bw(self, line):
+    "set_bw <sw_name> <sw_name> <bytes> <queue_id>"
+    words = line.split(" ")
+    if len(words) != 4:
+        print 'set_bw <sw_name> <sw_name> <bytes> <queue_id>'
+        return
+    s1 = words[0]
+    s2 = words[1]
+    datarate = words[2]
+    queue_id = words[3]
+    print "Given "+s1+" "+s2+" "+datarate+" "+queue_id
+    ifaces = utils.get_ifaces_of_link(self.mn, s1, s2)
+    qos.set_data_rate_on_iface_q(ifaces[0], queue_id, datarate)
+    qos.set_data_rate_on_iface_q(ifaces[1], queue_id, datarate)
+    
+
 if __name__ == '__main__':
     
+    flow_visor_config = False
+    if len(sys.argv) > 1 and sys.argv[1] == "fv":
+        print "Adding flowvisor"
+        flow_visor_config = True
+
     #1. Create mininet topology
     net = create_topology()
     net.start()
-    
     #2. Set IPs
     utils.set_static_ips(SLICES, net)
 
@@ -173,10 +209,13 @@ if __name__ == '__main__':
     print "non-edge_sw_dpids"+str(non_edge_sw_names)
 
     #3. Create flowspaces on all the switches.
-    flowvisor.add_fv_flows(FLOW_VISOR_IP, SLICES, edge_sw_dpids + non_edge_sw_dpids)
+    if flow_visor_config:
+        flowvisor.add_fv_flows(FLOW_VISOR_IP, SLICES, edge_sw_dpids + non_edge_sw_dpids)
     
     #4. Create QOS
     qos.add_qos_on_non_edge_switch_ifaces(net.switches, MAX_DATARATE_OF_INTERFACE, QUEUE_MAX_RATES)
+    
+    CLI.do_set_bw = set_bw
     CLI(net)
     net.stop()
-    utils.clean_up_config(FLOW_VISOR_IP, SLICES)
+

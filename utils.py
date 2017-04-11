@@ -1,6 +1,13 @@
 import subprocess
 import sys
 
+def clean_up_ovs_config():
+    commands += ["sudo ovs-vsctl --all destroy queue"]
+    commands += ["sudo ovs-vsctl --all destroy qos"]
+    for i in commands:
+        print "Executing" + str(i.split(" "))
+        process = subprocess.Popen(i.split(" "))
+
 def clean_up_config(fv_host, slices):
     commands = []
     for i in slices:
@@ -13,7 +20,6 @@ def clean_up_config(fv_host, slices):
         process = subprocess.Popen(i.split(" "))
 
 def enable_stp(switches):
-    print "Enabling STP on "+str(switches)
     for switch in switches:
         command = ["ovs-vsctl", "set", "bridge", switch.name, "stp-enable=true"]
         process = subprocess.Popen(command)
@@ -95,3 +101,17 @@ def set_static_ips(slices, net):
     for host in net.hosts:
         print "Assigned "+lookup_ip(host.name, slices)+" for "+host.name
         host.setIP(lookup_ip(host.name, slices))
+
+def get_ifaces_of_link(net, switch1, switch2):
+    s1 = net.getNodeByName(switch1)
+    s2 = net.getNodeByName(switch2)
+    s1_ifaces = s1.intfList()
+    s2_ifaces = s2.intfList()
+    for iface in s1_ifaces:
+        if iface.link:
+            print iface.link.intf1.name, iface.link.intf2.name
+            this_switch = iface.link.intf1.name.split("-")[0]
+            other_switch = iface.link.intf2.name.split("-")[0]
+            if this_switch == switch2 or other_switch == switch2:
+                    return (iface.link.intf1.name, iface.link.intf2.name)
+    return None
