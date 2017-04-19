@@ -1,5 +1,11 @@
 import subprocess
 import sys
+import os
+
+def create_folder_if_not_exists(directory):
+    print "Creating folder "+str(directory)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 def clean_up_ovs_config():
     commands += ["sudo ovs-vsctl --all destroy queue"]
