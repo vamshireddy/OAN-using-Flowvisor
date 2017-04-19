@@ -23,5 +23,16 @@ ensure that FlowVisor is running by getting its configuration:
 Check if the slices are created.
 `fvctl -f /dev/null list-slices`
 
-#### 3. Start Mininet
-`sudo python simple_home_access.py`
+#### 4. Run the ISP controllers
+* Copy the `isp1_controller` and `isp1_controller` to `~/pox/pox/forwarding`
+* Run these commands in ~/pox/ directory in a seperate terminals.sfaf
+`./pox.py samples.pretty_log log.level --DEBUG openflow.of_01 --port=11001 openflow.spanning_tree --no-flood --hold-down forwarding.isp1_controller`
+`./pox.py samples.pretty_log log.level --DEBUG openflow.of_01 --port=11002 openflow.spanning_tree --no-flood --hold-down forwarding.isp2_controller`
+
+#### 3. Start Mininet script 
+
+* if running for the first time `sudo python simple_home_access.py fv`
+* else `sudo python simple_home_access.py`
+
+#### 4. Now if you want to set bandwidth to a link between two switches a, b for a slice.
+`mininet> set_bw s1 s2 <bandwidth in bytes> <queue_id_of_the_slice>
