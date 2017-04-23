@@ -1,3 +1,4 @@
+import time
 import subprocess
 import socket
 import json
@@ -33,6 +34,7 @@ def add_qos_on_non_edge_switch_ifaces(switches, max_rate_of_interface, qmaxrates
             if iface.name == "lo":
                 continue
             add_qos_on_iface(iface.name, max_rate_of_interface, len(qmaxrates), qmaxrates)
+            time.sleep(0.5)
 
 def add_qos_on_iface(iface, max_rate, queue_count, qmaxrates):
     command = ['ovs-vsctl', 'set', 'port', iface]
@@ -106,9 +108,11 @@ def get_queue_id_of_qos(qos, queue_number):
     return None
 
 def set_data_rate_on_iface_q(iface, queue_number, data_rate):
+    data_rate = str(data_rate)
+    queue_number = str(queue_number)
     print "Setting data rate: "+str(iface)+" queue: "+str(queue_number)+" Datarate: "+str(data_rate)
     qos = get_qos_of_iface(iface)
-    print "QOS:"+qos
+    print "QOS:"+str(qos)
     if qos:
         queue_id = get_queue_id_of_qos(qos, queue_number)
         print "Queue:"+str(queue_id)

@@ -26,11 +26,16 @@ class SingleSwitchTopo(Topo):
             host = self.addHost('h%s' % (h + 1))
             self.addLink(host, switch)
 
-FLOW_VISOR_IP = "127.0.0.1"
+FLOW_VISOR_IP = "130.127.133.115"
 FLOW_VISOR_PORT = 6633
 NO_OF_HOMES_PER_AREA = 2
 NO_OF_ISPS = 2 
-MAX_DATARATE_OF_INTERFACE = 1000 * qos.MB_IN_KB * qos.KB_IN_B
+MAX_DATARATE_OF_INTERFACE = 1000 * qos.MB_IN_KB * qos.KB_IN_B # Max bw.
+CORE_LINK_SLICE_BW = 500 * qos.MB_IN_KB * qos.KB_IN_B # For both the slices
+AGGR_LINK_SLICE_BW = 200 * qos.MB_IN_KB * qos.KB_IN_B # For both the slices
+HOME_LINK_SLICE_BW = 50 * qos.MB_IN_KB * qos.KB_IN_B # For both the slices
+QUEUE_MAX_RATES = {1: 500 * qos.MB_IN_KB * qos.KB_IN_B, 2: 500 * qos.MB_IN_KB * qos.KB_IN_B} # For bootstrap.
+
 SLICES = {
         'comcast': { 
                     'email' : 'comcast.net', 
@@ -38,9 +43,9 @@ SLICES = {
                     'port' : '11001', 
                     'queue_id' : '1',
                     # These are the hosts that are directly connected to the ISP.
-                    'hosts': ['h3', 'h4', 'h9', 'h10', 'h1'],
+                    'hosts': ['h3', 'h5', 'h7', 'h9', 'h1'],
                     # Static IP mappings.
-                    'ip_mappings': {'h3': '10.0.0.3', 'h4': '10.0.0.4','h9': '10.0.0.9','h10': '10.0.0.10','h1': '10.0.0.1'},
+                    'ip_mappings': {'h3': '10.0.0.3', 'h5': '10.0.0.5','h7': '10.0.0.7','h9': '10.0.0.9','h1': '10.0.0.1'},
                     # These rules are installed on all of the switches.
                     'rules':
                     [
@@ -54,9 +59,9 @@ SLICES = {
                     'port' : '11002', 
                     'queue_id' : '2', 
                     # These are the hosts that are directly connected to the ISP.
-                    'hosts': ['h5', 'h6', 'h7', 'h8', 'h2'],
+                    'hosts': ['h4', 'h6', 'h8', 'h10', 'h2'],
                     # Static IP mappings.
-                    'ip_mappings': {'h5': '192.168.0.5', 'h6': '192.168.0.6','h7': '192.168.0.7','h8': '192.168.0.8','h2': '192.168.0.2'},
+                    'ip_mappings': {'h4': '192.168.0.4', 'h6': '192.168.0.6','h8': '192.168.0.8','h10': '192.168.0.10','h2': '192.168.0.2'},
                     # These rules are installed on all of the switches.
                     'rules': 
                     [
@@ -66,8 +71,6 @@ SLICES = {
                 }
         }
 
-
-QUEUE_MAX_RATES = {1: 100 * qos.MB_IN_KB * qos.KB_IN_B, 2: 100 * qos.MB_IN_KB * qos.KB_IN_B} #MB
 
 class HomeAccessTopo(Topo):
 
@@ -163,7 +166,9 @@ def create_1_sw_topology():
     net = Mininet(topo=topo, link=TCLink, autoSetMacs=True, controller=remote)
     return net
 
-def start_ISP_switchover_experiment(net, dirname):
+
+# This function is specifically tied to this topology. 
+def start_ISP_switchover_expt_within_zone(net, dirname):
     # Start traffic on h1 and h2. 
     # 10 Mbps constant rate UDP traffic to towards h3, h4, h5, h6
     traffic_rate = "10M" #Mbps
@@ -226,6 +231,33 @@ def set_bw(self, line):
     qos.set_data_rate_on_iface_q(ifaces[0], queue_id, datarate)
     qos.set_data_rate_on_iface_q(ifaces[1], queue_id, datarate)
     
+# Topology specific.
+def set_link_bandwidths_for_tests(net):
+    core_links = [('s1', 's8'), ('s8', 's15'), ('s1', 's15')]
+    aggr_links = [('s2', 's8'), ('s5', 's8'), ('s9', 's15'), ('s12', 's15')]
+    home_links = [('s3', 's2'), ('s4', 's2'), ('s6', 's5'), ('s7', 's5'), ('s10', 's9'), ('s11', 's9'), ('s14', 's12'), ('s13', 's12')]
+
+    for link in core_links:
+        ifaces = utils.get_ifaces_of_link(net, link[0], link[1])
+        for queue_id in QUEUE_MAX_RATES.keys():
+            print "Setting bw of "+str(CORE_LINK_SLICE_BW)+" on "+str(queue_id)+" between %s %s"%(link[0], link[1])
+            qos.set_data_rate_on_iface_q(ifaces[0], str(queue_id), CORE_LINK_SLICE_BW)
+            qos.set_data_rate_on_iface_q(ifaces[1], str(queue_id), CORE_LINK_SLICE_BW)
+    
+    for link in aggr_links:
+        ifaces = utils.get_ifaces_of_link(net, link[0], link[1])
+        for queue_id in QUEUE_MAX_RATES.keys():
+            print "Setting bw of "+str(AGGR_LINK_SLICE_BW)+" on "+str(queue_id)+" between %s %s"%(link[0], link[1])
+            qos.set_data_rate_on_iface_q(ifaces[0], str(queue_id), AGGR_LINK_SLICE_BW)
+            qos.set_data_rate_on_iface_q(ifaces[1], str(queue_id), AGGR_LINK_SLICE_BW)
+    
+    for link in home_links:
+        ifaces = utils.get_ifaces_of_link(net, link[0], link[1])
+        for queue_id in QUEUE_MAX_RATES.keys():
+            print "Setting bw of "+str(HOME_LINK_SLICE_BW)+" on "+str(queue_id)+" between %s %s"%(link[0], link[1])
+            qos.set_data_rate_on_iface_q(ifaces[0], str(queue_id), HOME_LINK_SLICE_BW)
+            qos.set_data_rate_on_iface_q(ifaces[1], str(queue_id), HOME_LINK_SLICE_BW)
+
 
 if __name__ == '__main__':
     
@@ -262,10 +294,14 @@ if __name__ == '__main__':
     if flow_visor_config:
         flowvisor.add_fv_flows(FLOW_VISOR_IP, SLICES, edge_sw_dpids + non_edge_sw_dpids)
     
-    #4. Create QOS
+    #4. Create QOS.
     qos.add_qos_on_non_edge_switch_ifaces(net.switches, MAX_DATARATE_OF_INTERFACE, QUEUE_MAX_RATES)
-    
     CLI.do_set_bw = set_bw
+
+    CLI(net)
+
+    #5. Set link bandwidths.
+    set_link_bandwidths_for_tests(net)
 
     print "Waiting 60 secs for STP to converge"
     # Sleep for STP
@@ -275,6 +311,6 @@ if __name__ == '__main__':
     dir_name = "tests/switchover1.1-"+str(timestamp)+"/"
     utils.create_folder_if_not_exists(dir_name)
     print "Starting switchover experiment"
-    start_ISP_switchover_experiment(net, dir_name)
+    #start_ISP_switchover_expt_within_zone(net, dir_name)
     net.stop()
 
