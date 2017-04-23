@@ -4,6 +4,7 @@
 import utils
 import pprint
 import qos
+import experiments
 import sys
 import flowvisor
 from mininet.topo import Topo
@@ -166,56 +167,6 @@ def create_1_sw_topology():
     net = Mininet(topo=topo, link=TCLink, autoSetMacs=True, controller=remote)
     return net
 
-
-# This function is specifically tied to this topology. 
-def start_ISP_switchover_expt_within_zone(net, dirname):
-    # Start traffic on h1 and h2. 
-    # 10 Mbps constant rate UDP traffic to towards h3, h4, h5, h6
-    traffic_rate = "10M" #Mbps
-    target_hosts = ['h3', 'h4', 'h5', 'h6']
-    
-    # Start monitoring the interfaces.
-    for host in target_hosts:
-        h = net.get(host)
-        h.cmd("bwm-ng -t 100 -o csv -u bits -T rate -C ',' > %s &"%(dir_name+"_"+host))
-    
-    i = 1
-    # Wait for sometime.
-    for isp in SLICES.keys():
-        server = net.get('h%s'%(i))
-        hosts = SLICES[isp]['hosts']
-        for host in hosts:
-            if host in target_hosts:
-                print "Starting traffic for "+host
-                h = net.get(host)
-                h.cmd("iperf -s -u &")
-                server.cmd("iperf -c "+net.get(host).IP()+" -u -b "+traffic_rate+" -t 10000 &")
-        i+=1
-    CLI(net)
-
-    # Wait for sometime.
-    print "Sleeping before ISP switch"
-    time.sleep(10)
-
-    # Switchover the h5 from ISP 2 to ISP 1.
-    node = net.get('h5')
-    server = net.get('h2')
-    server.cmd("pkill "+node.IP())
-
-    new_ip = "10.0.0.40"
-    node.setIP(new_ip)
-    print "Changed IP"
-    print node.cmd("ifconfig")
-
-    # Start traffic again for this host.
-    new_server = net.get('h1')
-    new_server.cmd("iperf -c "+node.IP()+" -u -b "+traffic_rate)
-
-    print "Switch done"
-    print new_server.cmd("ps aux | grep iperf")
-    time.sleep(10)
-    print "Experiment done"
-
 def set_bw(self, line):
     "set_bw <sw_name> <sw_name> <bytes> <queue_id>"
     words = line.split(" ")
@@ -243,6 +194,7 @@ def set_link_bandwidths_for_tests(net):
             print "Setting bw of "+str(CORE_LINK_SLICE_BW)+" on "+str(queue_id)+" between %s %s"%(link[0], link[1])
             qos.set_data_rate_on_iface_q(ifaces[0], str(queue_id), CORE_LINK_SLICE_BW)
             qos.set_data_rate_on_iface_q(ifaces[1], str(queue_id), CORE_LINK_SLICE_BW)
+            time.sleep(0.1)
     
     for link in aggr_links:
         ifaces = utils.get_ifaces_of_link(net, link[0], link[1])
@@ -250,6 +202,7 @@ def set_link_bandwidths_for_tests(net):
             print "Setting bw of "+str(AGGR_LINK_SLICE_BW)+" on "+str(queue_id)+" between %s %s"%(link[0], link[1])
             qos.set_data_rate_on_iface_q(ifaces[0], str(queue_id), AGGR_LINK_SLICE_BW)
             qos.set_data_rate_on_iface_q(ifaces[1], str(queue_id), AGGR_LINK_SLICE_BW)
+            time.sleep(0.1)
     
     for link in home_links:
         ifaces = utils.get_ifaces_of_link(net, link[0], link[1])
@@ -257,6 +210,7 @@ def set_link_bandwidths_for_tests(net):
             print "Setting bw of "+str(HOME_LINK_SLICE_BW)+" on "+str(queue_id)+" between %s %s"%(link[0], link[1])
             qos.set_data_rate_on_iface_q(ifaces[0], str(queue_id), HOME_LINK_SLICE_BW)
             qos.set_data_rate_on_iface_q(ifaces[1], str(queue_id), HOME_LINK_SLICE_BW)
+            time.sleep(0.1)
 
 
 if __name__ == '__main__':
@@ -298,19 +252,17 @@ if __name__ == '__main__':
     qos.add_qos_on_non_edge_switch_ifaces(net.switches, MAX_DATARATE_OF_INTERFACE, QUEUE_MAX_RATES)
     CLI.do_set_bw = set_bw
 
-    CLI(net)
-
     #5. Set link bandwidths.
     set_link_bandwidths_for_tests(net)
 
-    print "Waiting 60 secs for STP to converge"
     # Sleep for STP
-    CLI(net)
+    time.sleep(10)
 
     timestamp = time.time()
     dir_name = "tests/switchover1.1-"+str(timestamp)+"/"
     utils.create_folder_if_not_exists(dir_name)
     print "Starting switchover experiment"
-    #start_ISP_switchover_expt_within_zone(net, dir_name)
+    experiments.start_ISP_switchover_expt_within_zone(net, dir_name,  HOME_LINK_SLICE_BW)
+    
     net.stop()
 

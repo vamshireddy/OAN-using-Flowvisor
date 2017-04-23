@@ -2,6 +2,11 @@ import subprocess
 import sys
 import os
 
+def plot_two_graphs(infile1, infile2, outfile, title, bandwidth, g1, g2):
+    args = (infile1, infile2, outfile, title, bandwidth, g1, g2)
+    print "Executing: "+"sh plot_two_graphs.sh %s %s %s %s %s %s %s"%args
+    os.system("sh plot_two_graphs.sh %s %s %s %s %s %s %s"%args)
+
 def create_folder_if_not_exists(directory):
     print "Creating folder "+str(directory)
     if not os.path.exists(directory):
