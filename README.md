@@ -1,6 +1,14 @@
 # BaaS
 BaaS For Access Networks
 
+### Dependencies
+1. Flowvisor
+2. Mininet
+3. bwm-ng
+4. POX
+5. OVS (Also, run the openvswitch server on TCP - Used for JSON RPCs)
+7. Matplotlib - python
+
 ### Commands
 #### 1. FlowVisor
 Start flowvisor and initialize the Database.
