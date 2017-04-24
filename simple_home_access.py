@@ -262,7 +262,9 @@ if __name__ == '__main__':
     dir_name = "tests/switchover1.1-"+str(timestamp)+"/"
     utils.create_folder_if_not_exists(dir_name)
     print "Starting switchover experiment"
-    experiments.start_ISP_switchover_expt_within_zone(net, dir_name,  HOME_LINK_SLICE_BW)
-    
+    #experiments.start_ISP_switchover_expt_within_zone(net, dir_name,  HOME_LINK_SLICE_BW)
+    switching_nodes = {'h3':'192.168.0.40', 'h5':'192.168.0.41', 'h7':'192.168.0.42', 'h9':'192.168.0.43'}
+    #switching_nodes = {'h3':'192.168.0.40'}
+    experiments.perform_switchover(net, dir_name, HOME_LINK_SLICE_BW, switching_nodes)
     net.stop()
 
