@@ -9,6 +9,9 @@ BaaS For Access Networks
 5. OVS (Also, run the openvswitch server on TCP - Used for JSON RPCs)
 7. Matplotlib - python
 
+### Common problems and their solutions
+* While adding new flow rules, if `list-flowspaces` shows only two entries, then delete /etc/flowvisor/config.json and regenerate it.
+
 ### Commands
 #### 1. FlowVisor
 Start flowvisor and initialize the Database.
