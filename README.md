@@ -11,6 +11,7 @@ BaaS For Access Networks
 
 ### Common problems and their solutions
 * While adding new flow rules, if `list-flowspaces` shows only two entries, then delete /etc/flowvisor/config.json and regenerate it.
+* Clean the topology using scripts/clean.sh script after every run of mininet. 
 
 ### Commands
 #### 1. FlowVisor
